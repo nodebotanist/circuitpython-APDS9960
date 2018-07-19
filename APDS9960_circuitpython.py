@@ -55,7 +55,7 @@ class APDS9960():
     self._write_register(_REGISTER_POFFSET_UR, _DEVICE_DEFAULT_POFFSET_UR)
     self._write_register(_REGISTER_POFFSET_DL, _DEVICE_DEFAULT_POFFSET_DL)
     self._write_register(_REGISTER_CONFIG1, _DEVICE_DEFAULT_CONFIG1)
-    self.set_LED_current(_DEVICE_LED_CURRENTS["12.5mA"])
+    self.set_LED_current(_DEVICE_LED_CURRENTS["25mA"])
 
   def get_ID(self):
     chip_ID = self._read_register(_REGISTER_ID)
@@ -66,12 +66,7 @@ class APDS9960():
 
   def set_LED_current(self, current):
     currentControlValue = self._read_register(_REGISTER_CONTROL)
-    
-    current &= 0b00000011
-    current = current << 6
-    currentControlValue &= 0b00111111
-    currentControlValue |= current
-
+    self._set_mask(_REGISTER_CONTROL, current, 6, 2)
     self._write_register(_REGISTER_CONTROL, currentControlValue)
 
   def _set_mode(self, mode, on):
@@ -92,6 +87,22 @@ class APDS9960():
 
   def _get_mode(self):
     return self._read_register(_REGISTER_ENABLE)
+
+  def _set_mask(self, reg, value, shift, length, clear=False):
+    currentValue = self._read_register(reg)
+    print("Current Register: ")
+    print(currentValue)
+
+    mask = 0b00000000
+    for i in range(shift, shift + length):
+      mask |= (1 << i)
+  
+    currentValue &= ~(mask)
+    currentValue |= (value << shift)
+
+    print("New Register: ")
+    print(currentValue)
+    self._write_register(reg, currentValue)
 
   def _read_register(self, reg):
     self.buffer[0] = _COMMAND_BIT | reg
