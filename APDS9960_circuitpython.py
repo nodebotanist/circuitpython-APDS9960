@@ -98,6 +98,11 @@ class APDS9960():
 
     return clear, red, green, blue
     
+  def startGestureSensor(self):
+    return 0
+
+  def checkForGesture(self):
+    return 0
 
   def get_ID(self):
     chip_ID = self._read_register(_REGISTER_ID)
