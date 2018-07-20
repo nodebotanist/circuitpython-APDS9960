@@ -28,6 +28,20 @@ _DEVICE_LED_CURRENTS = {
   "12.5mA": 3
 }
 
+_DEVICE_PGAIN = {
+  "1X": 0,
+  "2X": 1,
+  "4X": 2,
+  "8X": 3
+}
+
+_DEVICE_AGAIN = {
+  "1X": 0,
+  "4X": 1,
+  "16X": 2,
+  "64X": 3
+}
+
 _DEVICE_DEFAULT_WTIME = 246
 _DEVICE_DEFAULT_PPULSE = 0x87
 _DEVICE_DEFAULT_POFFSET_UR = 0
@@ -43,6 +57,14 @@ _REGISTER_POFFSET_UR = const(0x9D)
 _REGISTER_POFFSET_DL = const(0x9E)
 _REGISTER_CONFIG1 = const(0x8D)
 _REGISTER_CONTROL = const(0x8F)
+_REGISTER_CDATAL = const(0x94)
+_REGISTER_CDATAH = const(0x95)
+_REGISTER_RDATAL = const(0x96)
+_REGISTER_RDATAH = const(0x97)
+_REGISTER_GDATAL = const(0x98)
+_REGISTER_GDATAH = const(0x99)
+_REGISTER_BDATAL = const(0x9A)
+_REGISTER_BDATAH = const(0x9B)
 
 class APDS9960():
   def __init__(self, i2c, address=_DEFAULT_ADDRESS):
@@ -55,7 +77,27 @@ class APDS9960():
     self._write_register(_REGISTER_POFFSET_UR, _DEVICE_DEFAULT_POFFSET_UR)
     self._write_register(_REGISTER_POFFSET_DL, _DEVICE_DEFAULT_POFFSET_DL)
     self._write_register(_REGISTER_CONFIG1, _DEVICE_DEFAULT_CONFIG1)
-    self.set_LED_current(_DEVICE_LED_CURRENTS["25mA"])
+    self._set_mask(_REGISTER_CONTROL, _DEVICE_LED_CURRENTS["25mA"], 6, 2) # set LED current
+    self._set_mask(_REGISTER_CONTROL, _DEVICE_PGAIN["4X"], 2, 2) # set proximity gain
+    self._set_mask(_REGISTER_CONTROL, _DEVICE_AGAIN["4X"], 0, 2) # set ambient light gain
+
+  def startColorSensor(self):
+    self._set_mode(_DEVICE_MODES["POWER"], True)
+    self._set_mode(_DEVICE_MODES["AMBIENT_LIGHT"], True)
+    print("color sensor ON")
+
+  def getColorReading(self):
+    clear = self._read_register(_REGISTER_CDATAH) << 8
+    clear |= self._read_register(_REGISTER_CDATAL)
+    red = self._read_register(_REGISTER_RDATAH) << 8
+    red |= self._read_register(_REGISTER_RDATAL)
+    green = self._read_register(_REGISTER_GDATAH) << 8
+    green |= self._read_register(_REGISTER_GDATAL)
+    blue = self._read_register(_REGISTER_BDATAH) << 8
+    blue |= self._read_register(_REGISTER_BDATAL)
+
+    return clear, red, green, blue
+    
 
   def get_ID(self):
     chip_ID = self._read_register(_REGISTER_ID)
@@ -63,11 +105,6 @@ class APDS9960():
       print("APDS9960 Found!")
     else:
       print("ERROR: ADPS9960 ID is not valid!")
-
-  def set_LED_current(self, current):
-    currentControlValue = self._read_register(_REGISTER_CONTROL)
-    self._set_mask(_REGISTER_CONTROL, current, 6, 2)
-    self._write_register(_REGISTER_CONTROL, currentControlValue)
 
   def _set_mode(self, mode, on):
     currentValue = self._get_mode()
