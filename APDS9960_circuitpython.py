@@ -6,6 +6,15 @@ _DEFAULT_ADDRESS = const(0x39)
 _VALID_ID1 = 0xAB
 _VALID_ID2 = 0x9C
 
+_DIR_NONE = const(0)
+_DIR_LEFT = const(1)
+_DIR_RIGHT = const(2)
+_DIR_UP = const(3)
+_DIR_DOWN = const(4)
+_DIR_NEAR = const(5)
+_DIR_FAR = const(6)
+_DIR_ALL = const(7)
+
 _DEVICE_MODES = {
   "POWER": 0,
   "AMBIENT_LIGHT": 1,
@@ -42,6 +51,13 @@ _DEVICE_AGAIN = {
   "64X": 3
 }
 
+_DEVICE_LED_BOOST = {
+  "100": 0,
+  "150": 1,
+  "200": 2,
+  "300": 3
+}
+
 _DEVICE_DEFAULT_WTIME = 246
 _DEVICE_DEFAULT_PPULSE = 0x87
 _DEVICE_DEFAULT_POFFSET_UR = 0
@@ -53,6 +69,7 @@ _REGISTER_ENABLE = const(0x80)
 _REGISTER_ATIME = const(0x81)
 _REGISTER_WTIME = const(0x83)
 _REGISTER_PPULSE = const(0x8E)
+_REGISTER_CONFIG2 = const(0x90)
 _REGISTER_POFFSET_UR = const(0x9D)
 _REGISTER_POFFSET_DL = const(0x9E)
 _REGISTER_CONFIG1 = const(0x8D)
@@ -69,7 +86,9 @@ _REGISTER_BDATAH = const(0x9B)
 class APDS9960():
   def __init__(self, i2c, address=_DEFAULT_ADDRESS):
     self.buffer = bytearray(3)
+    self.resetGestureData()
     self.i2c_device = I2CDevice(i2c, address)
+
     self.get_ID()
     self._set_mode(_DEVICE_MODES["ALL"], False)
     self._write_register(_REGISTER_ATIME, _DEVICE_ATIMES["DEFAULT"])
@@ -80,6 +99,20 @@ class APDS9960():
     self._set_mask(_REGISTER_CONTROL, _DEVICE_LED_CURRENTS["25mA"], 6, 2) # set LED current
     self._set_mask(_REGISTER_CONTROL, _DEVICE_PGAIN["4X"], 2, 2) # set proximity gain
     self._set_mask(_REGISTER_CONTROL, _DEVICE_AGAIN["4X"], 0, 2) # set ambient light gain
+
+  def resetGestureData(self):
+    self.gestureData = {
+      "index": 0,
+      "total_gestures": 0,
+      "ud_delta": 0,
+      "lr_delta": 0,
+      "ud_count": 0,
+      "lr_count": 0,
+      "near_count": 0,
+      "far_count": 0,
+      "state": 0,
+      "direction": _DIR_NONE
+    }
 
   def startColorSensor(self):
     self._set_mode(_DEVICE_MODES["POWER"], True)
@@ -99,7 +132,10 @@ class APDS9960():
     return clear, red, green, blue
     
   def startGestureSensor(self):
-    return 0
+    self.resetGestureData()
+    self._write_register(_REGISTER_WTIME, 0xFF)
+    self._write_register(_REGISTER_PPULSE, _DEVICE_DEFAULT_PPULSE)
+    self._set_mask(_REGISTER_CONFIG2, _DEVICE_LED_BOOST["300"], 4, 2)
 
   def checkForGesture(self):
     return 0
